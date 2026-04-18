@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* ─── Brand token ────────────────────────────────────────────────────────── */
+:root {
+  --brand: #E07535;
+  --brand-rgb: 224, 117, 53;
+  --brand-light: #F09050;
+  --brand-dark: #C06020;
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: auto; /* GSAP ScrollTrigger owns smooth scrolling */
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Helvetica Neue', Arial, sans-serif;
+  background-color: #f5f5f7;
+  color: #1d1d1f;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+/* ─── Marquee animation ──────────────────────────────────────────────────── */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* ─── Liquid Glass: isolate stacking context for backdrop-filter + filter ── */
+/*
+ * The combination of `filter: url(#lg-turbulence)` and `backdrop-filter`
+ * on the same element creates the liquid-glass distortion of the blurred
+ * backdrop WITHOUT distorting the content layers above it.
+ * Isolation is required for the stacking context to be independent.
+ */
+.lg-filter-layer {
+  isolation: isolate;
+}
+
+/* ─── Framer Motion layout animations ───────────────────────────────────── */
+[data-framer-motion-layout-id] {
+  will-change: transform;
+}
+
+/* ─── StyledRangeSlider — native input appearance reset ─────────────────── */
+/*
+ * StyledRangeSlider 컴포넌트 내 투명 native input이 기본 브라우저
+ * 스타일(thumb/track)을 완전히 숨기도록 전역 리셋을 적용.
+ * 비주얼은 컴포넌트 내부의 커스텀 div 레이어가 담당한다.
+ */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1px;
+  height: 1px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+input[type="range"]::-moz-range-track {
+  background: transparent;
+  height: 100%;
+  border: none;
+}
+input[type="range"]::-moz-range-thumb {
+  appearance: none;
+  width: 1px;
+  height: 1px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+input[type="range"]:focus {
+  outline: none;
+}
