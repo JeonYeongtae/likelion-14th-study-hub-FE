@@ -197,16 +197,17 @@ export default function ChatListPage() {
 
         {/* 로딩 */}
         {loading && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-            <div style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              border: '2px solid #e5e5ea',
-              borderTopColor: '#E07535',
-              animation: 'spin 0.7s linear infinite',
-            }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{
+                height: 80,
+                borderRadius: 16,
+                background: '#e5e5ea',
+                border: '1px solid #d2d2d7',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }} />
+            ))}
+            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
           </div>
         )}
 

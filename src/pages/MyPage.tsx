@@ -70,6 +70,58 @@ function InfoRow({
   );
 }
 
+// ─── 스켈레톤 로딩 ────────────────────────────────────────────────────────────
+
+function SkeletonLine({ width = '100%', height = 14 }: { width?: number | string; height?: number }) {
+  return (
+    <motion.div
+      animate={{ opacity: [0.4, 0.9, 0.4] }}
+      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+      style={{ width, height, borderRadius: 6, background: '#e5e5ea' }}
+    />
+  );
+}
+
+function SectionSkeleton() {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <SkeletonLine width={90} height={13} />
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e5ea', overflow: 'hidden', marginTop: 10 }}>
+        {[0, 1, 2].map((i) => (
+          <React.Fragment key={i}>
+            <div style={{ padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <SkeletonLine width="55%" height={14} />
+              <SkeletonLine width="35%" height={12} />
+            </div>
+            {i < 2 && <div style={{ height: 1, background: '#f2f2f7', margin: '0 20px' }} />}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <SkeletonLine width={60} height={13} />
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e5ea', overflow: 'hidden', marginTop: 10 }}>
+        {[0, 1, 2, 3].map((i) => (
+          <React.Fragment key={i}>
+            <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <SkeletonLine width={60} height={14} />
+              <SkeletonLine width={100} height={14} />
+            </div>
+            {i < 3 && <div style={{ height: 1, background: '#f2f2f7', margin: '0 20px' }} />}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── SectionCard ──────────────────────────────────────────────────────────────
+
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 28 }}>
@@ -293,7 +345,7 @@ function PostListSection({ posts, onNavigate }: { posts: PostResponse[]; onNavig
                 style={{
                   fontSize: 14,
                   color: '#1d1d1f',
-                  margin: '0 0 2px',
+                  margin: '0 0 4px',
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
                   textOverflow: 'ellipsis',
@@ -301,8 +353,11 @@ function PostListSection({ posts, onNavigate }: { posts: PostResponse[]; onNavig
               >
                 {p.title}
               </p>
-              <p style={{ fontSize: 12, color: '#6e6e73', margin: 0 }}>
-                {fd(p.created_at)} · 조회 {p.view_count ?? 0}
+              <p style={{ fontSize: 12, color: '#6e6e73', margin: 0, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <span>{fd(p.created_at)}</span>
+                <span>조회 {p.view_count ?? 0}</span>
+                <span>좋아요 {p.like_count ?? 0}</span>
+                <span>댓글 {p.comment_count ?? 0}</span>
               </p>
             </div>
             <svg
@@ -313,6 +368,7 @@ function PostListSection({ posts, onNavigate }: { posts: PostResponse[]; onNavig
               stroke="#c7c7cc"
               strokeWidth={2}
               strokeLinecap="round"
+              style={{ flexShrink: 0, marginLeft: 8 }}
             >
               <path d="M9 18l6-6-6-6" />
             </svg>
@@ -350,6 +406,20 @@ function CommentListSection({
             onMouseEnter={(e) => (e.currentTarget.style.background = '#f9f9fb')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
+            {/* 댓글이 달린 게시글 제목 */}
+            <p
+              style={{
+                fontSize: 12,
+                color: '#0071e3',
+                margin: '0 0 4px',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                fontWeight: 500,
+              }}
+            >
+              {c.post_title || `게시글 #${c.post_id}`}
+            </p>
             <p
               style={{
                 fontSize: 14,
@@ -365,7 +435,7 @@ function CommentListSection({
               {c.content}
             </p>
             <p style={{ fontSize: 12, color: '#aeaeb2', margin: 0 }}>
-              {fd(c.created_at)} · 게시글 #{c.post_id}
+              {fd(c.created_at)}
             </p>
           </div>
           {i < comments.length - 1 && <div style={{ height: 1, background: '#f2f2f7', margin: '0 20px' }} />}
@@ -836,11 +906,13 @@ export default function MyPage() {
   const [myApplications, setMyApplications] = useState<MyApplicationResponse[]>([]);
   const [myGroups, setMyGroups] = useState<StudyGroupDetailResponse[]>([]);
   const [loaded, setLoaded] = useState<Set<Section>>(new Set());
+  const [loadingSet, setLoadingSet] = useState<Set<Section>>(new Set());
 
   const loadSection = useCallback(
     async (s: Section) => {
       if (loaded.has(s)) return;
       setLoaded((prev) => new Set([...prev, s]));
+      setLoadingSet((prev) => new Set([...prev, s]));
       try {
         if (s === 'profile') {
           const r = await api.get('/users/me');
@@ -867,6 +939,8 @@ export default function MyPage() {
         }
       } catch {
         /* ignore */
+      } finally {
+        setLoadingSet((prev) => { const n = new Set(prev); n.delete(s); return n; });
       }
     },
     [loaded],
@@ -1059,37 +1133,45 @@ export default function MyPage() {
                 {NAV_ITEMS.find((n) => n.id === section)?.label}
               </h2>
 
-              {section === 'profile' && profile && (
-                <ProfileSection
-                  profile={profile}
-                  onUpdated={() => {
-                    setLoaded((p) => {
-                      const n = new Set(p);
-                      n.delete('profile');
-                      return n;
-                    });
-                    refresh();
-                  }}
-                />
+              {section === 'profile' && (
+                loadingSet.has('profile') ? <ProfileSkeleton /> :
+                profile ? (
+                  <ProfileSection
+                    profile={profile}
+                    onUpdated={() => {
+                      setLoaded((p) => {
+                        const n = new Set(p);
+                        n.delete('profile');
+                        return n;
+                      });
+                      refresh();
+                    }}
+                  />
+                ) : null
               )}
 
               {section === 'posts' && (
+                loadingSet.has('posts') ? <SectionSkeleton /> :
                 <PostListSection posts={posts} onNavigate={(id) => navigate(`/community/${id}`)} />
               )}
 
               {section === 'comments' && (
+                loadingSet.has('comments') ? <SectionSkeleton /> :
                 <CommentListSection comments={comments} onNavigate={(id) => navigate(`/community/${id}`)} />
               )}
 
               {section === 'likes' && (
+                loadingSet.has('likes') ? <SectionSkeleton /> :
                 <PostListSection posts={likes} onNavigate={(id) => navigate(`/community/${id}`)} />
               )}
 
               {section === 'reservations' && (
+                loadingSet.has('reservations') ? <SectionSkeleton /> :
                 <ReservationsSection reservations={reservations} onCancel={handleCancelReservation} />
               )}
 
               {section === 'studies' && (
+                loadingSet.has('studies') ? <><SectionSkeleton /><SectionSkeleton /></> :
                 <StudiesSection
                   myApplications={myApplications}
                   myGroups={myGroups}

@@ -60,6 +60,7 @@ export interface PostListResponse {
 export interface CommentResponse {
   id: number
   post_id: number
+  post_title: string
   user_id: number
   nickname: string
   parent_comment_id: number | null
