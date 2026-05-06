@@ -26,7 +26,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const APP_STATUS_STYLE: Record<string, { color: string; label: string }> = {
-  pending:  { color: '#FF9500',   label: '검토 중' },
+  pending:  { color: '#005BBB',   label: '검토 중' },
   accepted: { color: '#34C759',   label: '승인됨' },
   rejected: { color: '#ff3b30',   label: '거절됨' },
 }
@@ -44,33 +44,36 @@ function ApplicationRow({
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
       padding: '12px 16px', borderRadius: 12,
       background: '#ffffff', border: '1px solid #e5e5ea',
-      flexWrap: 'wrap', gap: 10,
+      gap: 10,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flex: 1, minWidth: 0 }}>
         <div style={{
           width: 28, height: 28, borderRadius: '50%',
           background: `hsl(${(app.applicant_id * 37) % 360}, 50%, 55%)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
         }}>
-          {app.applicant_id}
+          {(app.applicant_nickname || '?').charAt(0).toUpperCase()}
         </div>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>
-            user_{app.applicant_id}
+            {app.applicant_nickname || `user_${app.applicant_id}`}
           </span>
           {app.message && (
-            <p style={{ fontSize: 12, color: '#6e6e73', margin: '2px 0 0', lineHeight: 1.5 }}>
+            <p style={{
+              fontSize: 12, color: '#6e6e73', margin: '2px 0 0', lineHeight: 1.5,
+              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            }}>
               "{app.message}"
             </p>
           )}
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: s.color }}>{s.label}</span>
         {app.status === 'pending' && (
           <>
@@ -139,7 +142,11 @@ export default function GroupDetailPage() {
   }, [group, isLoggedIn, groupId, user?.id])
 
   const handleApply = async () => {
-    if (!isLoggedIn) { navigate('/auth'); return }
+    if (!isLoggedIn) {
+      if (!(await showConfirm('로그인이 필요한 기능입니다.\n로그인 페이지로 이동하시겠습니까?'))) return
+      navigate('/auth')
+      return
+    }
     setApplying(true)
     try {
       const res = await api.post(`/groups/${groupId}/apply`, { message: applyMsg.trim() || undefined })
@@ -204,7 +211,7 @@ export default function GroupDetailPage() {
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #e5e5ea', borderTopColor: '#E07535', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #e5e5ea', borderTopColor: '#0071E3', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
@@ -218,7 +225,7 @@ export default function GroupDetailPage() {
           <motion.button
             onClick={() => navigate('/groups')}
             whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.92 }}
-            style={{ color: '#E07535', background: 'none', border: 'none', cursor: 'pointer' }}>
+            style={{ color: '#0071E3', background: 'none', border: 'none', cursor: 'pointer' }}>
             목록으로
           </motion.button>
         </div>
@@ -274,8 +281,8 @@ export default function GroupDetailPage() {
             {isLeader && (
               <span style={{
                 fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 999,
-                background: 'rgba(224,117,53,0.08)', border: '1px solid rgba(224,117,53,0.2)',
-                color: '#E07535',
+                background: 'rgba(0,113,227,0.08)', border: '1px solid rgba(0,113,227,0.2)',
+                color: '#0071E3',
               }}>
                 조장
               </span>
@@ -287,7 +294,7 @@ export default function GroupDetailPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <input value={editForm.title}
                 onChange={(e) => setEditForm(f => ({ ...f, title: e.target.value }))}
-                style={{ background: '#f5f5f7', border: '1px solid rgba(224,117,53,0.5)', borderRadius: 10, padding: '10px 14px', fontSize: 18, fontWeight: 700, color: '#1d1d1f', outline: 'none', fontFamily: 'inherit', letterSpacing: '-0.02em' }} />
+                style={{ background: '#f5f5f7', border: '1px solid rgba(0,113,227,0.5)', borderRadius: 10, padding: '10px 14px', fontSize: 18, fontWeight: 700, color: '#1d1d1f', outline: 'none', fontFamily: 'inherit', letterSpacing: '-0.02em' }} />
               <textarea value={editForm.description}
                 onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="그룹 소개"
@@ -316,13 +323,15 @@ export default function GroupDetailPage() {
                 <motion.button
                   onClick={handleUpdateGroup}
                   whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
-                  style={{ padding: '9px 22px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: '#E07535', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                  className="liquid liquid-action"
+                  style={{ padding: '9px 22px', borderRadius: 10, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
                   저장
                 </motion.button>
                 <motion.button
                   onClick={() => setEditing(false)}
                   whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
-                  style={{ padding: '9px 18px', borderRadius: 10, fontSize: 14, background: '#f5f5f7', border: '1px solid #d2d2d7', color: '#6e6e73', cursor: 'pointer' }}>
+                  className="liquid"
+                  style={{ padding: '9px 18px', borderRadius: 10, fontSize: 14, border: 'none', color: '#6e6e73', cursor: 'pointer' }}>
                   취소
                 </motion.button>
               </div>
@@ -347,7 +356,7 @@ export default function GroupDetailPage() {
                   </span>
                 </div>
                 <div style={{ height: 5, borderRadius: 3, background: '#e5e5ea' }}>
-                  <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: pct >= 100 ? '#FF9500' : '#E07535', transition: 'width 0.5s ease' }} />
+                  <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: pct >= 100 ? '#005BBB' : '#0071E3', transition: 'width 0.5s ease' }} />
                 </div>
               </div>
 
@@ -452,17 +461,16 @@ export default function GroupDetailPage() {
             style={{ marginBottom: 24 }}
           >
             <motion.button
-              onClick={() => navigate(`/groups/${groupId}/chat`)}
+              onClick={() => navigate(`/groups/${groupId}/chat`, { state: { from: `/groups/${groupId}` } })}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
+              className="liquid liquid-action"
               style={{
                 width: '100%',
                 padding: '14px',
                 borderRadius: 16,
                 fontSize: 15,
                 fontWeight: 700,
-                background: 'linear-gradient(135deg, #E07535 0%, #FF9500 100%)',
-                color: '#fff',
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
@@ -471,7 +479,6 @@ export default function GroupDetailPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                boxShadow: '0 4px 16px rgba(224,117,53,0.30)',
               }}
             >
               <span style={{ fontSize: 18 }}>💬</span>
@@ -500,11 +507,15 @@ export default function GroupDetailPage() {
                   스터디 신청
                 </h2>
                 <motion.button
-                  onClick={() => navigate('/auth')}
+                  onClick={async () => {
+                    if (!(await showConfirm('로그인이 필요한 기능입니다.\n로그인 페이지로 이동하시겠습니까?'))) return
+                    navigate('/auth')
+                  }}
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  className="liquid liquid-action"
                   style={{
                     width: '100%', padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-                    background: '#E07535', color: '#fff', border: 'none', cursor: 'pointer',
+                    border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', letterSpacing: '-0.01em',
                   }}>
                   로그인 후 신청하기
@@ -513,7 +524,7 @@ export default function GroupDetailPage() {
             ) : myApplication === undefined ? (
               /* ── 내 신청 로딩 중 ── */
               <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #e5e5ea', borderTopColor: '#E07535', animation: 'spin 0.8s linear infinite' }} />
+                <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid #e5e5ea', borderTopColor: '#0071E3', animation: 'spin 0.8s linear infinite' }} />
               </div>
             ) : myApplication && !showReapplyForm ? (
               /* ── 신청 결과 카드 ── */
@@ -523,7 +534,7 @@ export default function GroupDetailPage() {
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                     style={{ textAlign: 'center', padding: '10px 0' }}>
                     <div style={{ fontSize: 30, marginBottom: 10 }}>⏳</div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: '#FF9500', margin: '0 0 5px', letterSpacing: '-0.01em' }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: '#005BBB', margin: '0 0 5px', letterSpacing: '-0.01em' }}>
                       신청 완료 · 검토 중
                     </p>
                     <p style={{ fontSize: 13, color: '#6e6e73', margin: 0 }}>
@@ -574,10 +585,10 @@ export default function GroupDetailPage() {
                       <motion.button
                         onClick={() => { setShowReapplyForm(true); setApplyMsg('') }}
                         whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
+                        className="liquid"
                         style={{
                           padding: '9px 22px', borderRadius: 12, fontSize: 13, fontWeight: 600,
-                          background: '#f5f5f7', border: '1px solid #d2d2d7',
-                          color: '#6e6e73', cursor: 'pointer', fontFamily: 'inherit',
+                          border: 'none', color: '#6e6e73', cursor: 'pointer', fontFamily: 'inherit',
                         }}>
                         다시 신청하기
                       </motion.button>
@@ -601,7 +612,7 @@ export default function GroupDetailPage() {
                     borderRadius: 10, padding: '10px 14px', fontSize: 14, color: '#1d1d1f',
                     outline: 'none', resize: 'none', lineHeight: 1.6, fontFamily: 'inherit', boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'rgba(224,117,53,0.5)')}
+                  onFocus={(e) => (e.target.style.borderColor = 'rgba(0,113,227,0.5)')}
                   onBlur={(e) => (e.target.style.borderColor = '#d2d2d7')}
                 />
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -609,10 +620,10 @@ export default function GroupDetailPage() {
                     <motion.button
                       onClick={() => setShowReapplyForm(false)}
                       whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      className="liquid"
                       style={{
                         flexShrink: 0, padding: '12px 18px', borderRadius: 12, fontSize: 14,
-                        background: '#f5f5f7', border: '1px solid #d2d2d7',
-                        color: '#6e6e73', cursor: 'pointer', fontFamily: 'inherit',
+                        border: 'none', color: '#6e6e73', cursor: 'pointer', fontFamily: 'inherit',
                       }}>
                       취소
                     </motion.button>
@@ -622,12 +633,13 @@ export default function GroupDetailPage() {
                     disabled={applying}
                     whileHover={!applying ? { scale: 1.02 } : {}}
                     whileTap={!applying ? { scale: 0.97 } : {}}
+                    className="liquid liquid-action"
                     style={{
                       flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-                      background: applying ? 'rgba(224,117,53,0.35)' : '#E07535',
-                      color: '#fff', border: 'none',
+                      border: 'none',
                       cursor: applying ? 'not-allowed' : 'pointer',
-                      fontFamily: 'inherit', letterSpacing: '-0.01em', transition: 'background 0.2s',
+                      fontFamily: 'inherit', letterSpacing: '-0.01em',
+                      opacity: applying ? 0.5 : 1,
                     }}>
                     {applying ? '신청 중...' : showReapplyForm ? '재신청하기' : '스터디 신청하기'}
                   </motion.button>
@@ -639,7 +651,7 @@ export default function GroupDetailPage() {
 
         {/* 정원 마감 확정 유도 배너 (조장 전용) */}
         {isLeader && group.status === '모집완료' && (
-          <AnimatePresence>
+          <AnimatePresence mode="wait">
             {!confirmingFull ? (
               <motion.div
                 key="banner-collapsed"
@@ -655,8 +667,8 @@ export default function GroupDetailPage() {
                   gap: 12,
                   padding: '16px 20px',
                   borderRadius: 16,
-                  background: 'linear-gradient(135deg, rgba(255,149,0,0.10) 0%, rgba(224,117,53,0.08) 100%)',
-                  border: '1px solid rgba(255,149,0,0.28)',
+                  background: 'linear-gradient(135deg, rgba(255,149,0,0.10) 0%, rgba(0,113,227,0.08) 100%)',
+                  border: '1px solid rgba(0,113,227,0.3)',
                   marginBottom: 20,
                 }}
               >
@@ -675,10 +687,10 @@ export default function GroupDetailPage() {
                   <motion.button
                     onClick={() => setConfirmingFull(true)}
                     whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.94 }}
+                    className="liquid liquid-action"
                     style={{
                       padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-                      background: '#FF9500', color: '#fff', border: 'none',
-                      cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em',
+                      border: 'none', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em',
                     }}
                   >
                     그룹 확정하기
@@ -696,8 +708,8 @@ export default function GroupDetailPage() {
                   padding: '22px 24px',
                   borderRadius: 16,
                   background: '#ffffff',
-                  border: '1.5px solid rgba(255,149,0,0.35)',
-                  boxShadow: '0 4px 20px rgba(255,149,0,0.10)',
+                  border: '1.5px solid rgba(0,113,227,0.35)',
+                  boxShadow: '0 4px 20px rgba(0,113,227,0.10)',
                   marginBottom: 20,
                 }}
               >
@@ -716,10 +728,10 @@ export default function GroupDetailPage() {
                   <motion.button
                     onClick={handleConfirmGroup}
                     whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
+                    className="liquid liquid-action"
                     style={{
                       flex: 1, padding: '11px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-                      background: '#FF9500', color: '#fff', border: 'none',
-                      cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em',
+                      border: 'none', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em',
                     }}
                   >
                     ✓ 확정하기
@@ -727,10 +739,10 @@ export default function GroupDetailPage() {
                   <motion.button
                     onClick={() => setConfirmingFull(false)}
                     whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
+                    className="liquid"
                     style={{
                       padding: '11px 20px', borderRadius: 12, fontSize: 14,
-                      background: '#f5f5f7', border: '1px solid #d2d2d7',
-                      color: '#6e6e73', cursor: 'pointer', fontFamily: 'inherit',
+                      border: 'none', color: '#6e6e73', cursor: 'pointer', fontFamily: 'inherit',
                     }}
                   >
                     나중에

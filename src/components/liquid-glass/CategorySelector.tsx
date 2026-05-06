@@ -15,7 +15,7 @@
  */
 
 import { useState, useRef } from 'react'
-import { motion, LayoutGroup, useMotionValue, useSpring } from 'framer-motion'
+import { motion, LayoutGroup } from 'framer-motion'
 import LiquidGlassBase from './LiquidGlassBase'
 import type { CategorySelectorProps } from '../../types'
 
@@ -31,10 +31,7 @@ export default function CategorySelector({
   const [isDragging, setIsDragging] = useState(false)
 
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([])
-
-  // Spring-driven x position — snaps back to 0 on drag end
-  const x = useMotionValue(0)
-  const springX = useSpring(x, { stiffness: 400, damping: 35, mass: 0.6 })
+  const pointerDownRef = useRef(false)
 
   function getNearestId(clientX: number): string {
     let nearest = categories[0].id
@@ -57,50 +54,48 @@ export default function CategorySelector({
   // ── Theme tokens ──────────────────────────────────────────────────────────
   const isLight = theme === 'light'
 
-  const containerBg   = isLight ? 'rgba(0,0,0,0.04)'            : 'rgba(255,255,255,0.06)'
-  const containerBorder = isLight ? '1px solid rgba(0,0,0,0.07)' : '1px solid rgba(255,255,255,0.1)'
   const activeColor   = isLight ? '#1d1d1f'                      : '#ffffff'
   const inactiveColor = isLight ? '#6e6e73'                      : 'rgba(255,255,255,0.45)'
   const activeTint    = isLight
-    ? 'rgba(224, 117, 53, 0.15)'
+    ? 'rgba(0, 113, 227, 0.15)'
     : 'rgba(99, 102, 241, 0.28)'
   const hoverBg       = isLight ? 'rgba(0,0,0,0.04)'            : 'rgba(255,255,255,0.07)'
-  const badgeBg       = isLight ? '#0071e3'                      : 'rgba(255,255,255,0.3)'
+  const badgeBg       = isLight ? '#0071E3'                      : 'rgba(255,255,255,0.3)'
   const badgeColor    = '#fff'
 
   return (
     <LayoutGroup>
       <div
-        className={`inline-flex items-center gap-1 p-1.5 rounded-[28px] ${className}`}
+        className={`liquid inline-flex items-center gap-1 p-1.5 rounded-[28px] ${className}`}
         style={{
-          background: containerBg,
-          border: containerBorder,
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
           overflow: 'hidden',
-          cursor: 'grab',
+          cursor: isDragging ? 'grabbing' : 'grab',
+        }}
+        onPointerDown={(e) => {
+          pointerDownRef.current = true
+          ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
+          setIsDragging(true)
+          setLiveSelected(selected)
+        }}
+        onPointerMove={(e) => {
+          if (!pointerDownRef.current) return
+          const nearest = getNearestId(e.clientX)
+          setLiveSelected(nearest)
+        }}
+        onPointerUp={(e) => {
+          if (!pointerDownRef.current) return
+          pointerDownRef.current = false
+          const nearest = getNearestId(e.clientX)
+          onSelect(nearest)
+          setIsDragging(false)
+        }}
+        onPointerCancel={() => {
+          pointerDownRef.current = false
+          setIsDragging(false)
         }}
       >
-        <motion.div
+        <div
           className="flex items-center gap-1"
-          style={{ x: springX }}
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.15}
-          onDragStart={() => {
-            setIsDragging(true)
-            setLiveSelected(selected)
-          }}
-          onDrag={(_e, info) => {
-            const nearest = getNearestId(info.point.x)
-            setLiveSelected(nearest)
-          }}
-          onDragEnd={(_e, info) => {
-            const nearest = getNearestId(info.point.x)
-            onSelect(nearest)
-            setIsDragging(false)
-            x.set(0)
-          }}
         >
           {categories.map((cat, i) => {
             const isActive = cat.id === activeId
@@ -174,7 +169,7 @@ export default function CategorySelector({
                   {cat.badge != null && cat.badge > 0 && (
                     <span style={{
                       minWidth: 16, height: 16, borderRadius: 8,
-                      background: isActive ? (isLight ? 'rgba(224,117,53,0.7)' : 'rgba(255,255,255,0.4)') : badgeBg,
+                      background: isActive ? (isLight ? 'rgba(0,113,227,0.7)' : 'rgba(255,255,255,0.4)') : badgeBg,
                       color: badgeColor,
                       fontSize: 10, fontWeight: 700,
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -187,7 +182,7 @@ export default function CategorySelector({
               </button>
             )
           })}
-        </motion.div>
+        </div>
       </div>
     </LayoutGroup>
   )

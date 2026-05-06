@@ -39,7 +39,7 @@ function PageFallback() {
         height: 32,
         borderRadius: '50%',
         border: '2px solid #e5e5ea',
-        borderTopColor: '#E07535',
+        borderTopColor: '#0071E3',
         animation: 'spin 0.8s linear infinite',
       }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>

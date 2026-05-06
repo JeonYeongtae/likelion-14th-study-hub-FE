@@ -5,14 +5,15 @@
  * POST /api/v1/groups/   (모집 글 생성 — 로그인 필요)
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useAlert } from '../contexts/AlertContext'
 import StyledRangeSlider from '../components/StyledRangeSlider'
-import type { StudyGroupResponse } from '../types/api'
+import type { StudyGroupResponse, MyApplicationResponse } from '../types/api'
+import CategorySelector from '../components/liquid-glass/CategorySelector'
 
 // ─── 상태 배지 색상 ───────────────────────────────────────────────────────────
 
@@ -24,10 +25,23 @@ const STATUS_STYLE: Record<string, { bg: string; border: string; text: string; l
 
 // ─── GroupCard ────────────────────────────────────────────────────────────────
 
-function GroupCard({ group, index }: { group: StudyGroupResponse; index: number }) {
+function GroupCard({
+  group, index, isOwn, appStatus,
+}: {
+  group: StudyGroupResponse
+  index: number
+  isOwn: boolean
+  appStatus: 'pending' | 'accepted' | null
+}) {
   const navigate = useNavigate()
   const s = STATUS_STYLE[group.status] ?? STATUS_STYLE['모집중']
   const pct = Math.round((group.current_members / group.max_members) * 100)
+
+  const baseBorder = isOwn ? 'rgba(0,113,227,0.35)' : '#e5e5ea'
+  const hoverBorder = isOwn ? 'rgba(0,113,227,0.6)' : '#d2d2d7'
+  const hoverShadow = isOwn
+    ? '0 4px 20px rgba(0,113,227,0.12)'
+    : '0 4px 20px rgba(0,0,0,0.07)'
 
   return (
     <motion.div
@@ -37,37 +51,72 @@ function GroupCard({ group, index }: { group: StudyGroupResponse; index: number 
       onClick={() => navigate(`/groups/${group.id}`)}
       style={{
         background: '#ffffff',
-        border: '1px solid #e5e5ea',
+        border: `1px solid ${baseBorder}`,
         borderRadius: 20,
         padding: '24px',
         cursor: 'pointer',
         transition: 'border-color 0.2s, box-shadow 0.2s',
         position: 'relative', overflow: 'hidden',
+        display: 'flex', flexDirection: 'column',
+        minHeight: 220,
       }}
       whileHover={{ y: -3 }}
       onMouseEnter={(e) => {
-        ;(e.currentTarget as HTMLDivElement).style.borderColor = '#d2d2d7'
-        ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.07)'
+        ;(e.currentTarget as HTMLDivElement).style.borderColor = hoverBorder
+        ;(e.currentTarget as HTMLDivElement).style.boxShadow = hoverShadow
       }}
       onMouseLeave={(e) => {
-        ;(e.currentTarget as HTMLDivElement).style.borderColor = '#e5e5ea'
+        ;(e.currentTarget as HTMLDivElement).style.borderColor = baseBorder
         ;(e.currentTarget as HTMLDivElement).style.boxShadow = 'none'
       }}
     >
       <div style={{
         position: 'absolute', top: 0, right: 0,
         width: 100, height: 100,
-        background: 'radial-gradient(circle at top right, rgba(224,117,53,0.04), transparent 70%)',
+        background: isOwn
+          ? 'radial-gradient(circle at top right, rgba(0,113,227,0.08), transparent 70%)'
+          : 'radial-gradient(circle at top right, rgba(0,113,227,0.04), transparent 70%)',
         pointerEvents: 'none',
       }} />
 
       {/* 상태 배지 */}
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 5,
-        padding: '3px 10px', borderRadius: 999, marginBottom: 12,
-        background: s.bg, border: `1px solid ${s.border}`,
-      }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: s.text }}>{s.label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 6 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: '3px 10px', borderRadius: 999,
+          background: s.bg, border: `1px solid ${s.border}`,
+        }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: s.text }}>{s.label}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {isOwn && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center',
+              padding: '3px 10px', borderRadius: 999,
+              background: 'rgba(0,113,227,0.08)', border: '1px solid rgba(0,113,227,0.3)',
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#0071E3' }}>내 그룹</span>
+            </div>
+          )}
+          {appStatus === 'pending' && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center',
+              padding: '3px 10px', borderRadius: 999,
+              background: 'rgba(0,113,227,0.07)', border: '1px solid rgba(0,113,227,0.2)',
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#0071E3' }}>신청 중</span>
+            </div>
+          )}
+          {appStatus === 'accepted' && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center',
+              padding: '3px 10px', borderRadius: 999,
+              background: 'rgba(52,199,89,0.08)', border: '1px solid rgba(52,199,89,0.25)',
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#34C759' }}>가입됨</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 제목 */}
@@ -92,7 +141,7 @@ function GroupCard({ group, index }: { group: StudyGroupResponse; index: number 
       )}
 
       {/* 인원 프로그레스 */}
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 12, marginTop: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <span style={{ fontSize: 12, color: '#aeaeb2' }}>멤버</span>
           <span style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73' }}>
@@ -103,7 +152,7 @@ function GroupCard({ group, index }: { group: StudyGroupResponse; index: number 
           <div style={{
             height: '100%', borderRadius: 2,
             width: `${pct}%`,
-            background: pct >= 100 ? '#FF9500' : pct >= 70 ? '#FF9F0A' : '#E07535',
+            background: pct >= 100 ? '#005BBB' : pct >= 70 ? '#3395F5' : '#0071E3',
             transition: 'width 0.4s ease',
           }} />
         </div>
@@ -119,13 +168,24 @@ function GroupCard({ group, index }: { group: StudyGroupResponse; index: number 
 
 // ─── CreateModal ──────────────────────────────────────────────────────────────
 
-function CreateModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif"
+
+type ModalAnimItem = { dx: number; dy: number; fromW: number; fromH: number; toW: number; toH: number }
+
+function CreateModal({
+  item,
+  onClose,
+  onSuccess,
+}: {
+  item: ModalAnimItem
+  onClose: () => void
+  onSuccess: () => void
+}) {
   const { showAlert } = useAlert()
   const [form, setForm] = useState({ title: '', description: '', max_members: 4 })
   const [loading, setLoading] = useState(false)
-  const overlayRef = useRef<HTMLDivElement>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
     if (!form.title.trim()) return
     setLoading(true)
@@ -148,79 +208,139 @@ function CreateModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   }
 
   return (
-    <motion.div ref={overlayRef}
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.14 }}
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px',
-      }}>
+        background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        fontFamily: FONT,
+      }}
+    >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ width: item.fromW, height: item.fromH, x: item.dx, y: item.dy, borderRadius: 8 }}
+        animate={{ width: item.toW, height: item.toH, x: 0, y: 0, borderRadius: 20 }}
+        exit={{ width: item.fromW, height: item.fromH, x: item.dx, y: item.dy, borderRadius: 8, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } }}
+        transition={{ type: 'spring', stiffness: 300, damping: 22, mass: 1 }}
+        onClick={(e) => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 520,
-          background: '#ffffff', border: '1px solid #e5e5ea',
-          borderRadius: 20, padding: '32px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
-        }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', margin: 0 }}>
-            스터디 그룹 모집
-          </h2>
-          <motion.button
-            onClick={onClose}
-            whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }}
-            style={{ background: 'none', border: 'none', color: '#aeaeb2', cursor: 'pointer', fontSize: 20, padding: 4, lineHeight: 1 }}>
-            ×
-          </motion.button>
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input value={form.title}
-            onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
-            placeholder="그룹 이름" maxLength={60} autoFocus
-            style={{ background: '#f5f5f7', border: '1px solid #d2d2d7', borderRadius: 10, padding: '12px 16px', fontSize: 15, fontWeight: 600, color: '#1d1d1f', outline: 'none', fontFamily: 'inherit' }}
-            onFocus={(e) => (e.target.style.borderColor = 'rgba(224,117,53,0.6)')}
-            onBlur={(e) => (e.target.style.borderColor = '#d2d2d7')} />
-
-          <textarea value={form.description}
-            onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
-            placeholder="그룹 소개 (선택)" rows={4}
-            style={{ background: '#f5f5f7', border: '1px solid #d2d2d7', borderRadius: 10, padding: '12px 16px', fontSize: 14, color: '#1d1d1f', outline: 'none', resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit' }}
-            onFocus={(e) => (e.target.style.borderColor = 'rgba(224,117,53,0.6)')}
-            onBlur={(e) => (e.target.style.borderColor = '#d2d2d7')} />
-
-          <div>
-            <label style={{ display: 'block', fontSize: 13, color: '#6e6e73', marginBottom: 4 }}>
-              최대 인원 : <strong style={{ color: '#1d1d1f' }}>{form.max_members}명</strong>
-            </label>
-            <StyledRangeSlider
-              min={2}
-              max={20}
-              value={form.max_members}
-              onChange={(v) => setForm(f => ({ ...f, max_members: v }))}
-            />
+          background: 'rgba(255, 255, 255, 0.84)',
+          backdropFilter: 'blur(30px) saturate(1.8) brightness(1.05)',
+          WebkitBackdropFilter: 'blur(30px) saturate(1.8) brightness(1.05)',
+          border: '1px solid rgba(0, 0, 0, 0.12)',
+          boxShadow: '0px 10px 40px rgba(0,0,0,0.11), 0px 1px 0px rgba(255,255,255,0.9), inset 0px 0px 0px 1px rgba(0,0,0,0.07)',
+          overflow: 'hidden',
+          flexShrink: 0,
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0.3, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, filter: 'blur(8px)' }}
+          transition={{ duration: 0.38, delay: 0.06, ease: 'easeOut' }}
+          style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
+        >
+          {/* 헤더 */}
+          <div style={{
+            position: 'relative',
+            padding: '26px 26px 22px',
+            background: 'linear-gradient(145deg, rgba(0,113,227,0.11) 0%, rgba(0,113,227,0.04) 60%, rgba(255,255,255,0) 100%)',
+            borderBottom: '1px solid rgba(0,113,227,0.1)',
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}>
+            <div style={{ position: 'absolute', top: -50, right: -50, width: 180, height: 180, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,113,227,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,113,227,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <div style={{ width: 4, height: 16, borderRadius: 2, background: 'linear-gradient(180deg, #0071E3, #4DA3FF)' }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0071E3', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Groups</span>
+                </div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1d1d1f', letterSpacing: '-0.04em', margin: '0 0 4px' }}>
+                  스터디 그룹 만들기
+                </h2>
+                <span style={{ fontSize: 12, color: '#aeaeb2' }}>함께 공부할 그룹을 개설하세요</span>
+              </div>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-            <motion.button type="button" onClick={onClose}
-              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
-              style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 500, background: '#f5f5f7', border: '1px solid #d2d2d7', color: '#6e6e73', cursor: 'pointer', fontFamily: 'inherit' }}>
-              취소
-            </motion.button>
-            <motion.button type="submit"
-              disabled={loading || !form.title.trim()}
-              whileHover={!loading && form.title.trim() ? { scale: 1.03 } : {}}
-              whileTap={!loading && form.title.trim() ? { scale: 0.96 } : {}}
-              style={{ padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: loading || !form.title.trim() ? 'rgba(224,117,53,0.3)' : '#E07535', color: '#fff', border: 'none', cursor: loading || !form.title.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
-              {loading ? '생성 중...' : '그룹 만들기'}
-            </motion.button>
-          </div>
-        </form>
+          {/* 본문 */}
+          <form onSubmit={handleSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ flex: 1, padding: '24px 26px', background: 'rgba(248, 248, 250, 0.5)', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+              {/* 그룹 이름 */}
+              <div style={{ position: 'relative', background: 'rgba(255, 255, 255, 0.7)', borderLeft: '4px solid #0071E3', borderRadius: '0 12px 12px 0', padding: '14px 18px', boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.65), inset 0 0 6px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.05)' }}>
+                <input
+                  value={form.title}
+                  onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="그룹 이름을 입력하세요"
+                  maxLength={60}
+                  autoFocus
+                  style={{
+                    width: '100%', border: 'none', padding: 0,
+                    fontSize: 15, fontWeight: 600, color: '#1d1d1f',
+                    outline: 'none', fontFamily: FONT, background: 'transparent',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {/* 그룹 소개 */}
+              <div style={{ flex: 1, position: 'relative', background: 'rgba(255, 255, 255, 0.7)', borderLeft: '4px solid #0071E3', borderRadius: '0 12px 12px 0', padding: '14px 18px', boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.65), inset 0 0 6px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="그룹 소개를 입력하세요 (선택)"
+                  style={{
+                    flex: 1,
+                    width: '100%', border: 'none', padding: 0,
+                    fontSize: 14, color: '#1d1d1f', lineHeight: 1.9,
+                    outline: 'none', resize: 'none', fontFamily: FONT,
+                    background: 'transparent', boxSizing: 'border-box',
+                    wordBreak: 'break-word', overflowY: 'auto',
+                  }}
+                />
+              </div>
+
+              {/* 최대 인원 */}
+              <div style={{ position: 'relative', background: 'rgba(255, 255, 255, 0.7)', borderLeft: '4px solid #0071E3', borderRadius: '0 12px 12px 0', padding: '14px 18px', boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.65), inset 0 0 6px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 13, color: '#6e6e73', fontWeight: 500 }}>최대 인원</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#0071E3' }}>{form.max_members}명</span>
+                </div>
+                <StyledRangeSlider
+                  min={2}
+                  max={20}
+                  value={form.max_members}
+                  onChange={(v) => setForm(f => ({ ...f, max_members: v }))}
+                />
+              </div>
+            </div>
+
+            {/* 푸터 */}
+            <div style={{ padding: '14px 26px', borderTop: '1px solid rgba(0,0,0,0.07)', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                className="liquid"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 12, border: 'none', color: '#6e6e73', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '-0.01em', fontFamily: FONT }}
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !form.title.trim()}
+                className="liquid liquid-action"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 12, border: 'none', fontSize: 13, fontWeight: 600, cursor: loading || !form.title.trim() ? 'not-allowed' : 'pointer', letterSpacing: '-0.01em', fontFamily: FONT, opacity: loading || !form.title.trim() ? 0.4 : 1 }}
+              >
+                {loading ? '생성 중...' : '그룹 만들기'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
       </motion.div>
     </motion.div>
   )
@@ -229,11 +349,12 @@ function CreateModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 // ─── GroupsPage ───────────────────────────────────────────────────────────────
 
 export default function GroupsPage() {
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, user } = useAuth()
   const [groups, setGroups] = useState<StudyGroupResponse[]>([])
   const [loading, setLoading] = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'recruiting'>('all')
+  const [createItem, setCreateItem] = useState<ModalAnimItem | null>(null)
+  const [filter, setFilter] = useState<'all' | 'recruiting' | 'mine' | 'applied'>('all')
+  const [appMap, setAppMap] = useState<Map<number, 'pending' | 'accepted'>>(new Map())
 
   const fetchGroups = () => {
     fetch('/api/v1/groups/')
@@ -244,9 +365,26 @@ export default function GroupsPage() {
 
   useEffect(() => { fetchGroups() }, [])
 
-  const displayed = filter === 'recruiting'
-    ? groups.filter(g => g.status === '모집중')
-    : groups
+  useEffect(() => {
+    if (!isLoggedIn) { setAppMap(new Map()); setFilter(f => (f === 'mine' || f === 'applied') ? 'all' : f); return }
+    api.get('/my/applications').then(async r => {
+      if (!r.ok) return
+      const apps: MyApplicationResponse[] = await r.json()
+      const m = new Map<number, 'pending' | 'accepted'>()
+      for (const a of apps) {
+        if (a.status === 'pending' || a.status === 'accepted') {
+          m.set(a.group_id, a.status)
+        }
+      }
+      setAppMap(m)
+    })
+  }, [isLoggedIn])
+
+  const displayed =
+    filter === 'recruiting' ? groups.filter(g => g.status === '모집중') :
+    filter === 'mine'       ? groups.filter(g => !!user && g.leader_id === user.id) :
+    filter === 'applied'    ? groups.filter(g => appMap.has(g.id)) :
+    groups
 
   return (
     <div style={{
@@ -263,7 +401,7 @@ export default function GroupsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           style={{ marginBottom: 32 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#E07535' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#0071E3' }}>
             Study Groups
           </span>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.03em', margin: '8px 0 0' }}>
@@ -273,27 +411,38 @@ export default function GroupsPage() {
 
         {/* 필터 + 생성 버튼 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['all', 'recruiting'] as const).map(f => (
-              <motion.button key={f} onClick={() => setFilter(f)}
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.93 }}
-                style={{
-                  padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 500,
-                  background: filter === f ? '#E07535' : '#f2f2f7',
-                  border: `1px solid ${filter === f ? '#E07535' : '#d2d2d7'}`,
-                  color: filter === f ? '#fff' : '#6e6e73',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  transition: 'background 0.18s, border-color 0.18s, color 0.18s',
-                }}>
-                {f === 'all' ? '전체' : '모집 중'}
-              </motion.button>
-            ))}
-          </div>
+          <CategorySelector
+            theme="light"
+            selected={filter}
+            onSelect={(id) => setFilter(id as typeof filter)}
+            categories={([
+              { key: 'all',        label: '전체',        count: groups.length,                                               loginRequired: false },
+              { key: 'recruiting', label: '모집 중',      count: groups.filter(g => g.status === '모집중').length,             loginRequired: false },
+              { key: 'mine',       label: '내 그룹',      count: groups.filter(g => !!user && g.leader_id === user.id).length, loginRequired: true  },
+              { key: 'applied',    label: '신청한 그룹',   count: appMap.size,                                                 loginRequired: true  },
+            ] as const)
+              .filter(f => !f.loginRequired || isLoggedIn)
+              .map(f => ({ id: f.key, label: f.label, badge: f.count }))}
+          />
 
           {isLoggedIn && (
-            <motion.button onClick={() => setShowCreate(true)}
+            <motion.button
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                const toW = Math.min(window.innerWidth - 32, 640)
+                const toH = window.innerHeight - 80 * 2
+                setCreateItem({
+                  dx: (rect.left + rect.width / 2) - window.innerWidth / 2,
+                  dy: (rect.top + rect.height / 2) - window.innerHeight / 2,
+                  fromW: rect.width,
+                  fromH: rect.height,
+                  toW,
+                  toH,
+                })
+              }}
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              style={{ padding: '9px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: '#E07535', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em' }}>
+              className="liquid liquid-action"
+              style={{ padding: '10px 20px', borderRadius: 22, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
               + 그룹 만들기
             </motion.button>
           )}
@@ -313,16 +462,25 @@ export default function GroupsPage() {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-            {displayed.map((g, i) => <GroupCard key={g.id} group={g} index={i} />)}
+            {displayed.map((g, i) => (
+            <GroupCard
+              key={g.id}
+              group={g}
+              index={i}
+              isOwn={!!user && g.leader_id === user.id}
+              appStatus={appMap.get(g.id) ?? null}
+            />
+          ))}
           </div>
         )}
       </div>
 
       <AnimatePresence>
-        {showCreate && (
+        {createItem && (
           <CreateModal
-            onClose={() => setShowCreate(false)}
-            onSuccess={() => { setShowCreate(false); fetchGroups() }}
+            item={createItem}
+            onClose={() => setCreateItem(null)}
+            onSuccess={() => { setCreateItem(null); fetchGroups() }}
           />
         )}
       </AnimatePresence>

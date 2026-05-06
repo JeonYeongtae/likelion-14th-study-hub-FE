@@ -7,6 +7,8 @@
 
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react'
 
+const CONFIRM_TIMEOUT_MS = 10_000
+
 export type AlertType = 'success' | 'error' | 'info' | 'confirm'
 
 export interface AlertState {
@@ -32,6 +34,10 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
 
   const dismiss = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
+    if (confirmResolveRef.current) {
+      confirmResolveRef.current(false)
+      confirmResolveRef.current = null
+    }
     setAlert(null)
   }, [])
 
@@ -49,6 +55,11 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     return new Promise((resolve) => {
       confirmResolveRef.current = resolve
       setAlert({ message, type: 'confirm' })
+      timerRef.current = setTimeout(() => {
+        confirmResolveRef.current?.(false)
+        confirmResolveRef.current = null
+        setAlert(null)
+      }, CONFIRM_TIMEOUT_MS)
     })
   }, [])
 

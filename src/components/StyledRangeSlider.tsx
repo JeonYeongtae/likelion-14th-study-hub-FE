@@ -52,8 +52,8 @@ export default function StyledRangeSlider({ min, max, value, onChange }: StyledR
             left: 0, top: 0, bottom: 0,
             width: `${pct}%`,
             borderRadius: 999,
-            background: 'linear-gradient(90deg, #E07535 0%, #F09050 100%)',
-            boxShadow: isDragging ? '0 0 8px rgba(224,117,53,0.30)' : 'none',
+            background: 'linear-gradient(90deg, #0071E3 0%, #3395F5 100%)',
+            boxShadow: isDragging ? '0 0 8px rgba(0,113,227,0.30)' : 'none',
             transition: isDragging
               ? 'box-shadow 0.2s ease'
               : 'width 0.08s ease, box-shadow 0.2s ease',
@@ -71,9 +71,9 @@ export default function StyledRangeSlider({ min, max, value, onChange }: StyledR
           height:       isDragging ? 14 : 16,
           borderRadius: isDragging ? 7  : '50%',
           background: '#ffffff',
-          border: `2px solid ${isDragging ? '#E07535' : 'rgba(224,117,53,0.65)'}`,
+          border: `2px solid ${isDragging ? '#0071E3' : 'rgba(0,113,227,0.65)'}`,
           boxShadow: isDragging
-            ? '0 2px 14px rgba(224,117,53,0.40), 0 1px 4px rgba(0,0,0,0.15)'
+            ? '0 2px 14px rgba(0,113,227,0.40), 0 1px 4px rgba(0,0,0,0.15)'
             : '0 1px 7px rgba(0,0,0,0.18)',
           transition:
             'width 0.22s ease, height 0.22s ease, border-radius 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease',

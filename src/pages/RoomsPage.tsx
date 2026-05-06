@@ -19,7 +19,7 @@ function CapacityDots({ capacity }: { capacity: number }) {
       {Array.from({ length: Math.min(capacity, 10) }).map((_, i) => (
         <div key={i} style={{
           width: 6, height: 6, borderRadius: '50%',
-          background: i < capacity ? 'rgba(224,117,53,0.6)' : '#e5e5ea',
+          background: i < capacity ? 'rgba(0,113,227,0.6)' : '#e5e5ea',
         }} />
       ))}
       {capacity > 10 && (
@@ -67,7 +67,7 @@ function RoomCard({ room, index }: { room: RoomResponse; index: number }) {
         position: 'absolute', top: 0, right: 0,
         width: 120, height: 120,
         background: room.is_available
-          ? 'radial-gradient(circle at top right, rgba(224,117,53,0.05), transparent 70%)'
+          ? 'radial-gradient(circle at top right, rgba(0,113,227,0.05), transparent 70%)'
           : 'transparent',
         pointerEvents: 'none',
       }} />
@@ -123,7 +123,7 @@ function RoomCard({ room, index }: { room: RoomResponse; index: number }) {
       {room.is_available && (
         <div style={{
           position: 'absolute', bottom: 28, right: 28,
-          fontSize: 18, color: 'rgba(224,117,53,0.5)',
+          fontSize: 18, color: 'rgba(0,113,227,0.5)',
         }}>
           →
         </div>
@@ -163,7 +163,7 @@ export default function RoomsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           style={{ marginBottom: 40 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#E07535' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#0071E3' }}>
             Study Rooms
           </span>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.03em', margin: '8px 0 8px' }}>

@@ -62,7 +62,7 @@ function InfoRow({
         }}
       >
         <span style={{ fontSize: 14, color: '#1d1d1f', flexShrink: 0, minWidth: 80 }}>{label}</span>
-        <span style={{ fontSize: 14, color: '#1d1d1f', flex: 1, textAlign: 'right' }}>{value}</span>
+        <span style={{ fontSize: 14, color: '#1d1d1f', flex: 1, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
         {action}
       </div>
       {separator && <div style={{ height: 1, background: '#f2f2f7', margin: '0 20px' }} />}
@@ -196,7 +196,7 @@ function ProfileSection({ profile, onUpdated }: { profile: ProfileResponse; onUp
                   style={{
                     fontSize: 14,
                     color: '#1d1d1f',
-                    border: '1px solid #0071e3',
+                    border: '1px solid #0071E3',
                     borderRadius: 8,
                     padding: '5px 10px',
                     outline: 'none',
@@ -209,15 +209,15 @@ function ProfileSection({ profile, onUpdated }: { profile: ProfileResponse; onUp
                   disabled={saving}
                   whileHover={!saving ? { scale: 1.05 } : {}}
                   whileTap={!saving ? { scale: 0.93 } : {}}
+                  className="liquid liquid-action"
                   style={{
                     fontSize: 13,
-                    color: '#fff',
-                    background: saving ? 'rgba(0,113,227,0.5)' : '#0071e3',
                     border: 'none',
                     borderRadius: 8,
                     padding: '5px 14px',
                     cursor: saving ? 'not-allowed' : 'pointer',
                     fontFamily: 'inherit',
+                    opacity: saving ? 0.5 : 1,
                   }}
                 >
                   {saving ? '...' : '저장'}
@@ -228,11 +228,11 @@ function ProfileSection({ profile, onUpdated }: { profile: ProfileResponse; onUp
                     setNickname(profile.nickname);
                   }}
                   whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.93 }}
+                  className="liquid"
                   style={{
                     fontSize: 13,
                     color: '#6e6e73',
-                    background: 'none',
-                    border: '1px solid #d2d2d7',
+                    border: 'none',
                     borderRadius: 8,
                     padding: '5px 12px',
                     cursor: 'pointer',
@@ -250,7 +250,7 @@ function ProfileSection({ profile, onUpdated }: { profile: ProfileResponse; onUp
                   whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.9 }}
                   style={{
                     fontSize: 13,
-                    color: '#0071e3',
+                    color: '#0071E3',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
@@ -302,7 +302,7 @@ function ProfileSection({ profile, onUpdated }: { profile: ProfileResponse; onUp
                 fontSize: 12,
                 fontWeight: 600,
                 background: profile.role === 'admin' ? '#fff3e8' : '#f2f2f7',
-                color: profile.role === 'admin' ? '#e07535' : '#6e6e73',
+                color: profile.role === 'admin' ? '#0071e3' : '#6e6e73',
               }}
             >
               {profile.role === 'admin' ? '관리자' : '일반 회원'}
@@ -340,7 +340,7 @@ function PostListSection({ posts, onNavigate }: { posts: PostResponse[]; onNavig
             onMouseEnter={(e) => (e.currentTarget.style.background = '#f9f9fb')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
               <p
                 style={{
                   fontSize: 14,
@@ -410,7 +410,7 @@ function CommentListSection({
             <p
               style={{
                 fontSize: 12,
-                color: '#0071e3',
+                color: '#0071E3',
                 margin: '0 0 4px',
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
@@ -550,13 +550,13 @@ function ReservationsSection({
 // ─── 스터디 섹션 ──────────────────────────────────────────────────────────────
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  pending:  { label: '검토 중',   color: '#e07535', bg: '#fef3e8' },
+  pending:  { label: '검토 중',   color: '#0071e3', bg: '#e8f0fe' },
   accepted: { label: '수락됨',   color: '#34c759', bg: '#e8fde8' },
   rejected: { label: '거절됨',   color: '#ff3b30', bg: '#fde8e8' },
 };
 
 const GROUP_STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  '모집중':   { label: '모집중',   color: '#0071e3', bg: '#e8f0fe' },
+  '모집중':   { label: '모집중',   color: '#0071E3', bg: '#e8f0fe' },
   '모집완료': { label: '모집완료', color: '#6e6e73', bg: '#f2f2f7' },
   '종료':     { label: '종료',     color: '#aeaeb2', bg: '#f9f9fb' },
 };
@@ -598,7 +598,7 @@ function StudiesSection({
                   onMouseEnter={(e) => (e.currentTarget.style.background = '#f9f9fb')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                     <p
                       style={{
                         fontSize: 14,
@@ -677,7 +677,7 @@ function StudiesSection({
                       onMouseEnter={(e) => (e.currentTarget.style.background = '#f9f9fb')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <p
                             style={{
@@ -688,6 +688,8 @@ function StudiesSection({
                               overflow: 'hidden',
                               whiteSpace: 'nowrap',
                               textOverflow: 'ellipsis',
+                              flex: 1,
+                              minWidth: 0,
                             }}
                           >
                             {group.title}
@@ -714,8 +716,8 @@ function StudiesSection({
                                 marginLeft: 8,
                                 fontSize: 11,
                                 fontWeight: 600,
-                                color: '#e07535',
-                                background: '#fef3e8',
+                                color: '#0071e3',
+                                background: '#e8f0fe',
                                 padding: '1px 6px',
                                 borderRadius: 5,
                               }}
@@ -777,11 +779,11 @@ function StudiesSection({
                                       flexShrink: 0,
                                     }}
                                   >
-                                    {app.applicant_id}
+                                    {(app.applicant_nickname || '?').charAt(0).toUpperCase()}
                                   </div>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <p style={{ fontSize: 13, color: '#1d1d1f', margin: '0 0 1px', fontWeight: 500 }}>
-                                      회원 #{app.applicant_id}
+                                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                                    <p style={{ fontSize: 13, color: '#1d1d1f', margin: '0 0 1px', fontWeight: 500, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                      {app.applicant_nickname || `회원 #${app.applicant_id}`}
                                     </p>
                                     {app.message && (
                                       <p
@@ -871,16 +873,17 @@ function SecuritySection() {
         <motion.button
           onClick={handleWithdraw}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.93 }}
+          className="liquid"
           style={{
             fontSize: 13,
             color: '#ff3b30',
-            background: 'none',
-            border: '1px solid #ffd7d5',
+            border: 'none',
             borderRadius: 8,
             padding: '5px 14px',
             cursor: 'pointer',
             fontFamily: 'inherit',
-          }}
+            '--c-glass': '#ff3b30',
+          } as React.CSSProperties}
         >
           탈퇴하기
         </motion.button>
@@ -980,22 +983,24 @@ export default function MyPage() {
         style={{
           background: '#fff',
           borderBottom: '1px solid #e5e5ea',
-          padding: '20px 48px',
+          padding: '20px 24px',
         }}
       >
-        <p
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: '#6e6e73',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            margin: '0 0 2px',
-          }}
-        >
-          Study Hub
-        </p>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', margin: 0 }}>계정</h1>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#6e6e73',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              margin: '0 0 2px',
+            }}
+          >
+            Study Hub
+          </p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', margin: 0 }}>계정</h1>
+        </div>
       </div>
 
       <div
@@ -1080,7 +1085,7 @@ export default function MyPage() {
                       fontSize: 14,
                       fontWeight: active ? 600 : 400,
                       background: active ? 'rgba(255,255,255,0.88)' : 'transparent',
-                      color: active ? '#E07535' : '#1d1d1f',
+                      color: active ? '#0071E3' : '#1d1d1f',
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -1096,7 +1101,7 @@ export default function MyPage() {
                         width={13}
                         height={13}
                         fill="none"
-                        stroke="#E07535"
+                        stroke="#0071E3"
                         strokeWidth={2.5}
                         strokeLinecap="round"
                       >
@@ -1111,7 +1116,7 @@ export default function MyPage() {
         </aside>
 
         {/* ── 메인 콘텐츠 ───────────────────────────────────────────────── */}
-        <main>
+        <main style={{ minWidth: 0, overflow: 'hidden' }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={section}

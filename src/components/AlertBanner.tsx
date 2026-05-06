@@ -9,6 +9,8 @@
  *   motion.div는 y/scale/opacity 애니메이션만 담당 → transform 충돌 없음
  */
 
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAlert } from '../contexts/AlertContext'
 
@@ -28,11 +30,11 @@ const TYPE_CONFIG = {
     glow:   'rgba(255,59,48,0.16)',
   },
   info: {
-    color:  '#E07535',
-    bg:     'rgba(224,117,53,0.11)',
-    border: 'rgba(224,117,53,0.28)',
+    color:  '#0071E3',
+    bg:     'rgba(0,113,227,0.11)',
+    border: 'rgba(0,113,227,0.28)',
     icon:   'i',
-    glow:   'rgba(224,117,53,0.18)',
+    glow:   'rgba(0,113,227,0.18)',
   },
   confirm: {
     color:  '#1d1d1f',
@@ -46,6 +48,11 @@ const TYPE_CONFIG = {
 export default function AlertBanner() {
   const { alert, dismiss, handleConfirm, handleCancel } = useAlert()
   const cfg = alert ? TYPE_CONFIG[alert.type] : TYPE_CONFIG.info
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    dismiss()
+  }, [pathname])
 
   return (
     <AnimatePresence>
@@ -146,14 +153,14 @@ export default function AlertBanner() {
                     whileTap={{ scale: 0.87 }}
                     style={{
                       width: 40, height: 40, borderRadius: '50%',
-                      background: 'rgba(224,117,53,0.15)',
+                      background: 'rgba(0,113,227,0.15)',
                       backdropFilter: 'blur(14px)',
                       WebkitBackdropFilter: 'blur(14px)',
-                      border: '1px solid rgba(224,117,53,0.35)',
+                      border: '1px solid rgba(0,113,227,0.35)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#E07535',
+                      cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#0071E3',
                       fontFamily: 'inherit',
-                      boxShadow: '0 2px 12px rgba(224,117,53,0.25)',
+                      boxShadow: '0 2px 12px rgba(0,113,227,0.25)',
                     }}
                   >
                     확인

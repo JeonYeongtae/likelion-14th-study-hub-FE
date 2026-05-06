@@ -29,6 +29,7 @@ export interface ProfileResponse {
 export interface PostImageResponse {
   id: number
   image_url: string
+  is_representative: boolean
   created_at: string
 }
 
@@ -65,6 +66,7 @@ export interface CommentResponse {
   nickname: string
   parent_comment_id: number | null
   content: string
+  is_deleted: boolean
   created_at: string
   updated_at: string | null
 }
@@ -138,6 +140,7 @@ export interface StudyGroupResponse {
 export interface ApplicationSummary {
   id: number
   applicant_id: number
+  applicant_nickname: string
   status: string
   message: string | null
   created_at: string

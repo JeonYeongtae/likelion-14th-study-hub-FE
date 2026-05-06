@@ -77,7 +77,7 @@ export default function LiquidGlassBase({
       />
 
       {/* ── Layer 4: Content (always crisp, above all glass layers) ─────────── */}
-      <div style={{ position: 'relative', zIndex: 3 }}>{children}</div>
+      <div style={{ position: 'relative', zIndex: 3, height: '100%' }}>{children}</div>
     </div>
   )
 }

@@ -54,7 +54,7 @@ function FloatingInput({
           fontSize: 16,
           color: '#1D1D1F',
           background: '#fff',
-          border: `1.5px solid ${focused ? '#0071e3' : '#d2d2d7'}`,
+          border: `1.5px solid ${focused ? '#0071E3' : '#d2d2d7'}`,
           borderRadius: 12,
           outline: 'none',
           boxShadow: focused ? '0 0 0 3px rgba(0,113,227,0.15)' : 'none',
@@ -66,8 +66,8 @@ function FloatingInput({
       <motion.label
         animate={
           floated
-            ? { top: 8, fontSize: 11, color: focused ? '#0071e3' : '#6e6e73' }
-            : { top: 17, fontSize: 16, color: '#6e6e73' }
+            ? { top: 8, y: 0, fontSize: 11, color: focused ? '#0071E3' : '#6e6e73' }
+            : { top: '50%', y: '-50%', fontSize: 16, color: '#6e6e73' }
         }
         transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
         style={{
@@ -109,6 +109,7 @@ function PrimaryBtn({
         disabled={disabled}
         whileHover={{ scale: disabled ? 1 : 1.015 }}
         whileTap={{ scale: disabled ? 1 : 0.975 }}
+        className="liquid liquid-action"
         style={{
           width: '100%',
           borderRadius: 12,
@@ -116,18 +117,17 @@ function PrimaryBtn({
           fontSize: 16,
           fontWeight: 500,
           letterSpacing: '-0.01em',
-          background: disabled ? '#a1c4f0' : '#0071e3',
-          color: '#fff',
           border: 'none',
           cursor: disabled ? 'not-allowed' : 'pointer',
           fontFamily: 'inherit',
-          transition: 'background 0.2s',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
+          opacity: disabled ? 0.5 : 1,
         }}
       >
+        {children}
         {loading && (
           <span style={{
             display: 'inline-block', width: 16, height: 16, borderRadius: '50%',
@@ -135,7 +135,6 @@ function PrimaryBtn({
             animation: 'spin 0.8s linear infinite', flexShrink: 0,
           }} />
         )}
-        {children}
       </motion.button>
     </>
   )
@@ -225,7 +224,7 @@ function PasswordStep({
           alignItems: 'center',
           gap: 6,
           fontSize: 14,
-          color: '#0071e3',
+          color: '#0071E3',
           background: 'none',
           border: 'none',
           cursor: 'pointer',
@@ -413,9 +412,12 @@ function ReactivateStep({
         <PrimaryBtn type="button" onClick={handleReactivate} loading={loading} disabled={loading}>
           {loading ? '복구 중...' : '복귀하기'}
         </PrimaryBtn>
-        <button
+        <motion.button
           type="button"
           onClick={onBack}
+          whileHover={{ scale: 1.015 }}
+          whileTap={{ scale: 0.975 }}
+          className="liquid"
           style={{
             width: '100%',
             borderRadius: 12,
@@ -423,15 +425,14 @@ function ReactivateStep({
             fontSize: 16,
             fontWeight: 500,
             letterSpacing: '-0.01em',
-            background: 'transparent',
+            border: 'none',
             color: '#6e6e73',
-            border: '1.5px solid #d2d2d7',
             cursor: 'pointer',
             fontFamily: 'inherit',
           }}
         >
           돌아가기
-        </button>
+        </motion.button>
       </div>
     </div>
   )
@@ -488,7 +489,9 @@ export default function AuthPage() {
       >
         {/* 로고 */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-          <StudyHubLogo size={110} variant="page" />
+          <div onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+            <StudyHubLogo size={110} variant="page" />
+          </div>
         </div>
 
         {/* 타이틀 */}
@@ -502,12 +505,14 @@ export default function AuthPage() {
             style={{ textAlign: 'center', marginBottom: 28 }}
           >
             <h1
+              onClick={() => navigate('/')}
               style={{
                 fontSize: 24,
                 fontWeight: 700,
                 letterSpacing: '-0.03em',
                 color: '#1D1D1F',
                 margin: '0 0 6px',
+                cursor: 'pointer',
               }}
             >
               {TITLES[step].title}
@@ -565,7 +570,7 @@ export default function AuthPage() {
               style={{
                 fontSize: 14,
                 fontWeight: 500,
-                color: '#0071e3',
+                color: '#0071E3',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -586,7 +591,7 @@ export default function AuthPage() {
               style={{
                 fontSize: 14,
                 fontWeight: 500,
-                color: '#0071e3',
+                color: '#0071E3',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',

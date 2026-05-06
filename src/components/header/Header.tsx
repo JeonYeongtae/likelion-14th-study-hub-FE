@@ -15,12 +15,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import LiquidShaderBase from '../liquid-glass/LiquidShaderBase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNotification } from '../../contexts/NotificationContext'
+import { useAlert } from '../../contexts/AlertContext'
 
 const NAV_LINKS = [
-  { label: '스터디룸', href: '/rooms' },
-  { label: '커뮤니티', href: '/community' },
-  { label: '스터디 그룹', href: '/groups' },
-  { label: '채팅', href: '/chats' },
+  { label: '스터디룸', href: '/rooms', authRequired: false },
+  { label: '커뮤니티', href: '/community', authRequired: false },
+  { label: '스터디 그룹', href: '/groups', authRequired: false },
+  { label: '채팅', href: '/chats', authRequired: true },
 ]
 
 const PATH_TITLES: Record<string, string> = {
@@ -60,7 +61,9 @@ function getSwipeRoutes(pathname: string): { swipeLeft?: string; swipeRight?: st
   return {}
 }
 
-const SWIPE_THRESHOLD = 48  // px — 이 이상 드래그해야 라우팅 실행
+const SWIPE_THRESHOLD = 96  // px — 이 이상 드래그해야 라우팅 실행
+const MAX_DRAG        = 96  // px — swipeDeltaX 상한 (= 시각 완료 거리)
+const SNAP_THRESHOLD  = 72  // px — 이 지점부터 목적지가 스냅(= threshold의 75%)
 
 function UserIcon() {
   return (
@@ -87,9 +90,14 @@ function BellIcon() {
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [swipeDeltaX, setSwipeDeltaX] = useState(0)  // 드래그 중 시각 피드백용
-  const touchStartX = useRef<number | null>(null)
+  const [isNarrow, setIsNarrow] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const dragStartX = useRef<number | null>(null)
+  const isDragging = useRef(false)
+  const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { isLoggedIn, user, logout } = useAuth()
   const { unreadCount } = useNotification()
+  const { showConfirm } = useAlert()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -100,42 +108,111 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    const check = () => setIsNarrow(window.innerWidth < 620)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const openMenu = () => {
+    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current)
+    setMenuOpen(true)
+  }
+  const closeMenu = () => {
+    menuCloseTimer.current = setTimeout(() => setMenuOpen(false), 150)
+  }
+
   const handleLogout = async () => {
     await logout()
     navigate('/')
   }
 
-  // ── Pill 모드 스와이프 핸들러 ────────────────────────────────────────────────
+  // ── Pill 모드 스와이프 핸들러 (터치 + 마우스 드래그 통합) ────────────────────
   const swipeRoutes = getSwipeRoutes(location.pathname)
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
+  // ── 공통 시작/이동/종료 로직 ─────────────────────────────────────────────────
+  const handleDragStart = (clientX: number) => {
+    dragStartX.current = clientX
+    isDragging.current = true
     setSwipeDeltaX(0)
   }
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return
-    const delta = e.touches[0].clientX - touchStartX.current
-    // 화살표 힌트가 존재하는 방향으로만 시각 피드백 제공
+  const handleDragMove = (clientX: number) => {
+    if (dragStartX.current === null || !isDragging.current) return
+    const delta = clientX - dragStartX.current
     if ((delta > 0 && swipeRoutes.swipeRight) || (delta < 0 && swipeRoutes.swipeLeft)) {
-      setSwipeDeltaX(Math.max(-32, Math.min(32, delta)))
+      setSwipeDeltaX(Math.max(-MAX_DRAG, Math.min(MAX_DRAG, delta)))
     }
   }
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return
-    const delta = e.changedTouches[0].clientX - touchStartX.current
-    touchStartX.current = null
+  const handleDragEnd = (clientX: number) => {
+    if (dragStartX.current === null || !isDragging.current) return
+    const delta = clientX - dragStartX.current
+    dragStartX.current = null
+    isDragging.current = false
     setSwipeDeltaX(0)
+
+    const tryNavigate = async (route: string) => {
+      // 상세 페이지 → 목록 페이지(부모) 이동: 브라우저 back으로 URL 파라미터 보존
+      if (location.pathname.startsWith(route + '/')) {
+        navigate(-1)
+        return
+      }
+      const targetLink = NAV_LINKS.find(l => l.href === route)
+      if (targetLink?.authRequired && !isLoggedIn) {
+        if (!(await showConfirm('로그인이 필요한 기능입니다.\n로그인 페이지로 이동하시겠습니까?'))) return
+        navigate('/auth')
+      } else {
+        navigate(route)
+      }
+    }
 
     if (delta > SWIPE_THRESHOLD && swipeRoutes.swipeRight) {
-      navigate(swipeRoutes.swipeRight)
+      tryNavigate(swipeRoutes.swipeRight)
     } else if (delta < -SWIPE_THRESHOLD && swipeRoutes.swipeLeft) {
-      navigate(swipeRoutes.swipeLeft)
+      tryNavigate(swipeRoutes.swipeLeft)
     }
+  }
+
+  // ── 터치 이벤트 ──────────────────────────────────────────────────────────────
+  const handleTouchStart = (e: React.TouchEvent) => handleDragStart(e.touches[0].clientX)
+  const handleTouchMove  = (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX)
+  const handleTouchEnd   = (e: React.TouchEvent) => handleDragEnd(e.changedTouches[0].clientX)
+
+  // ── 마우스 이벤트 ────────────────────────────────────────────────────────────
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    handleDragStart(e.clientX)
+
+    // 마우스가 타이틀 밖으로 나가도 드래그 추적을 유지하기 위해 window에 등록
+    const onMouseMove = (ev: MouseEvent) => handleDragMove(ev.clientX)
+    const onMouseUp   = (ev: MouseEvent) => {
+      handleDragEnd(ev.clientX)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup',   onMouseUp)
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup',   onMouseUp)
   }
 
   const title = pageTitle(location.pathname)
+  // 알림 등 다른 페이지에서 넘어온 경우, swipeRight가 뒤로가기 동작이므로 출처 페이지명 표시
+  const fromPath: string | undefined = (location.state as { from?: string } | null)?.from
+  const swipeRightLabel = fromPath ? pageTitle(fromPath) : (swipeRoutes.swipeRight ? pageTitle(swipeRoutes.swipeRight) : '')
+  // 0 ~ 1: 드래그가 최대 시각 범위(MAX_DRAG)에 얼마나 도달했는지
+  const dragProgress = Math.min(1, Math.abs(swipeDeltaX) / MAX_DRAG)
+  // smoothstep(3t²-2t³): 정방향·역방향 모두 양 끝에서 완만, 중간에서 가속
+  const easedProgress = dragProgress * dragProgress * (3 - 2 * dragProgress)
+  // 현재 드래그 방향에 유효한 라우트가 있는지
+  const hasActiveDest =
+    (swipeDeltaX > 0 && !!swipeRoutes.swipeRight) ||
+    (swipeDeltaX < 0 && !!swipeRoutes.swipeLeft)
+  // 스냅 임계점 돌파 여부 — 목적지가 중앙에 자석처럼 고정되는 시점
+  const isSnapped = Math.abs(swipeDeltaX) >= SNAP_THRESHOLD && hasActiveDest
+  // 방향별 스냅 여부
+  const isSnapRight = isSnapped && swipeDeltaX > 0
+  const isSnapLeft  = isSnapped && swipeDeltaX < 0
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 flex justify-center"
@@ -173,13 +250,10 @@ export default function Header() {
                          animate={{ y }}를 직렬화할 때 덮어쓰므로, x 이동도
                          animate 프롭으로 전달한다. touchAction: 'none'으로
                          브라우저가 수평 터치를 가로채지 않도록 한다. */}
+                  {/* 제스처 영역 — 화살표는 absolute, 타이틀이 전체 너비 점유 */}
                   <motion.span
                     initial={{ opacity: 0, y: 4 }}
-                    animate={{
-                      opacity: 1,
-                      y: 0,
-                      x: swipeDeltaX * 0.18,
-                    }}
+                    animate={{ opacity: 1, y: 0, x: swipeDeltaX * 0.22 }}
                     transition={{
                       opacity: { delay: 0.15, duration: 0.3 },
                       y:       { delay: 0.15, duration: 0.3 },
@@ -188,49 +262,151 @@ export default function Header() {
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
+                    onMouseDown={handleMouseDown}
                     className="text-xs font-medium flex-1 select-none"
                     style={{
+                      position: 'relative',
                       color: '#6e6e73',
                       letterSpacing: '-0.01em',
-                      cursor: (swipeRoutes.swipeLeft || swipeRoutes.swipeRight) ? 'grab' : 'default',
+                      cursor: isDragging.current
+                        ? 'grabbing'
+                        : (swipeRoutes.swipeLeft || swipeRoutes.swipeRight)
+                          ? 'grab'
+                          : 'default',
                       touchAction: 'none',
+                      userSelect: 'none',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 4,
                     }}>
-                    {/* 왼쪽 화살표 힌트 (swipeRight 라우트 존재 시) */}
+
+                    {/* ← 왼쪽 화살표 — 스냅 시에만 활성화
+                        왼쪽 드래그(비활성) 시 부모 span의 x 이동을 상쇄해 로고 영역 침범 방지 */}
                     {swipeRoutes.swipeRight && (
-                      <svg width={8} height={8} viewBox="0 0 8 8" fill="none"
-                        style={{
-                          opacity: swipeDeltaX > 8 ? 0.75 : 0.2,
-                          flexShrink: 0,
-                          transition: 'opacity 0.1s',
+                      <motion.svg
+                        width={9} height={9} viewBox="0 0 8 8" fill="none"
+                        style={{ position: 'absolute', left: 0, zIndex: 1, pointerEvents: 'none' }}
+                        animate={{
+                          opacity: isSnapped && swipeDeltaX > 0 ? 0.85 : 0.18,
+                          scale:   isSnapped && swipeDeltaX > 0 ? 1.4 : 1,
+                          x: swipeDeltaX < 0 ? -swipeDeltaX * 0.2 : 0,
+                        }}
+                        transition={{
+                          opacity: { type: 'spring', stiffness: 650, damping: 12, mass: 0.5 },
+                          scale:   { type: 'spring', stiffness: 650, damping: 12, mass: 0.5 },
+                          x:       { duration: 0 },
                         }}>
                         <path d="M5 1L2 4l3 3" stroke="#6e6e73" strokeWidth={1.5}
                           strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
+                      </motion.svg>
                     )}
-                    {title}
-                    {/* 오른쪽 화살표 힌트 (swipeLeft 라우트 존재 시) */}
+
+                    {/* 타이틀 컨테이너 — 전체 너비, 텍스트는 안에서 슬라이드 */}
+                    <div style={{
+                      width: '100%',
+                      position: 'relative',
+                      height: '1.4em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                    }}>
+                      {/* 현재 페이지명 — 스프링으로 쫀득하게 드래그 방향으로 밀리다 스냅 시 페이드아웃 */}
+                      <motion.span
+                        animate={{
+                          x: Math.sign(swipeDeltaX) * easedProgress * 200,
+                          opacity: isSnapped ? 0 : Math.max(0, 1 - easedProgress * 1.6),
+                        }}
+                        transition={{
+                          x: isSnapped
+                            ? { type: 'spring', stiffness: 340, damping: 28 }
+                            : { type: 'spring', stiffness: 80, damping: 22 },
+                          opacity: { type: 'tween', duration: isSnapped ? 0.12 : 0.06 },
+                        }}
+                        style={{ position: 'absolute', whiteSpace: 'nowrap' }}>
+                        {title}
+                      </motion.span>
+
+                      {/* 오른쪽 드래그 목적지 — 항상 왼쪽(-200)에 대기, 중앙으로만 이동
+                          방향이 고정되어 있어 반대편을 가로지르는 글리치가 발생하지 않음 */}
+                      {swipeRoutes.swipeRight && (
+                        <motion.span
+                          animate={{
+                            x: isSnapRight
+                              ? 0
+                              : swipeDeltaX > 0
+                                ? -(1 - easedProgress) * 200
+                                : -200,
+                            opacity: swipeDeltaX > 0 ? (isSnapRight ? 1 : easedProgress) : 0,
+                          }}
+                          transition={{
+                            x: isSnapRight
+                              ? { type: 'spring', stiffness: 340, damping: 28 }
+                              : { type: 'spring', stiffness: 280, damping: 32 },
+                            opacity: { type: 'tween', duration: 0.06 },
+                          }}
+                          style={{ position: 'absolute', whiteSpace: 'nowrap', color: '#1d1d1f', fontWeight: 500 }}>
+                          {swipeRightLabel}
+                        </motion.span>
+                      )}
+
+                      {/* 왼쪽 드래그 목적지 — 항상 오른쪽(+200)에 대기, 중앙으로만 이동 */}
+                      {swipeRoutes.swipeLeft && (
+                        <motion.span
+                          animate={{
+                            x: isSnapLeft
+                              ? 0
+                              : swipeDeltaX < 0
+                                ? (1 - easedProgress) * 200
+                                : 200,
+                            opacity: swipeDeltaX < 0 ? (isSnapLeft ? 1 : easedProgress) : 0,
+                          }}
+                          transition={{
+                            x: isSnapLeft
+                              ? { type: 'spring', stiffness: 340, damping: 28 }
+                              : { type: 'spring', stiffness: 280, damping: 32 },
+                            opacity: { type: 'tween', duration: 0.06 },
+                          }}
+                          style={{ position: 'absolute', whiteSpace: 'nowrap', color: '#1d1d1f', fontWeight: 500 }}>
+                          {pageTitle(swipeRoutes.swipeLeft)}
+                        </motion.span>
+                      )}
+                    </div>
+
+                    {/* → 오른쪽 화살표 — 스냅 시에만 활성화
+                        오른쪽 드래그(비활성) 시 부모 span의 x 이동을 상쇄해 프로필 영역 침범 방지 */}
                     {swipeRoutes.swipeLeft && (
-                      <svg width={8} height={8} viewBox="0 0 8 8" fill="none"
-                        style={{
-                          opacity: swipeDeltaX < -8 ? 0.75 : 0.2,
-                          flexShrink: 0,
-                          transition: 'opacity 0.1s',
+                      <motion.svg
+                        width={9} height={9} viewBox="0 0 8 8" fill="none"
+                        style={{ position: 'absolute', right: 0, zIndex: 1, pointerEvents: 'none' }}
+                        animate={{
+                          opacity: isSnapped && swipeDeltaX < 0 ? 0.85 : 0.18,
+                          scale:   isSnapped && swipeDeltaX < 0 ? 1.4 : 1,
+                          x: swipeDeltaX > 0 ? -swipeDeltaX * 0.2 : 0,
+                        }}
+                        transition={{
+                          opacity: { type: 'spring', stiffness: 650, damping: 12, mass: 0.5 },
+                          scale:   { type: 'spring', stiffness: 650, damping: 12, mass: 0.5 },
+                          x:       { duration: 0 },
                         }}>
                         <path d="M3 1l3 3-3 3" stroke="#6e6e73" strokeWidth={1.5}
                           strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
+                      </motion.svg>
                     )}
+
                   </motion.span>
 
                   {/* 유저 아이콘 */}
                   <motion.button
-                    onClick={() => navigate(isLoggedIn ? '/my' : '/auth')}
+                    onClick={async () => {
+                      if (isLoggedIn) {
+                        navigate('/my')
+                      } else {
+                        if (!(await showConfirm('로그인이 필요한 기능입니다.\n로그인 페이지로 이동하시겠습니까?'))) return
+                        navigate('/auth')
+                      }
+                    }}
                     whileTap={{ scale: 0.88 }}
-                    className="flex-shrink-0 flex items-center justify-center rounded-full"
+                    className="shrink-0 flex items-center justify-center rounded-full"
                     style={{ position: 'relative', width: 28, height: 28, background: 'rgba(0,0,0,0.06)', color: '#1d1d1f' }}
                     aria-label="마이페이지">
                     <UserIcon />
@@ -254,16 +430,20 @@ export default function Header() {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}>
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr auto 1fr',
-                alignItems: 'center',
-                height: 52,
-                paddingLeft: 48,
-                paddingRight: 48,
                 background: 'rgba(255,255,255,0.85)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
                 borderBottom: '1px solid rgba(0,0,0,0.08)',
+              }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr',
+                alignItems: 'center',
+                height: 52,
+                maxWidth: 1080,
+                margin: '0 auto',
+                paddingLeft: 32,
+                paddingRight: 32,
               }}>
                 {/* 로고 */}
                 <Link to="/" aria-label="StudyHub 홈"
@@ -273,28 +453,63 @@ export default function Header() {
                 </Link>
 
                 {/* 중앙 nav */}
-                <nav className="hidden md:flex items-center" style={{ gap: 32 }}>
-                  {NAV_LINKS.map((link) => {
-                    const active = location.pathname.startsWith(link.href)
-                    return (
-                      <Link key={link.label} to={link.href}
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 400,
-                          color: active ? '#1d1d1f' : '#6e6e73',
-                          textDecoration: 'none',
-                          transition: 'color 0.2s',
-                          whiteSpace: 'nowrap',
-                          letterSpacing: '-0.01em',
-                        }}
-                        onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#1d1d1f')}
-                        onMouseLeave={(e) => ((e.target as HTMLElement).style.color = active ? '#1d1d1f' : '#6e6e73')}
-                      >
-                        {link.label}
-                      </Link>
-                    )
-                  })}
-                </nav>
+                {!isNarrow ? (
+                  <nav className="flex items-center" style={{ gap: 32 }}>
+                    {NAV_LINKS.map((link) => {
+                      const active = location.pathname.startsWith(link.href)
+                      const linkStyle = {
+                        fontSize: 13,
+                        fontWeight: 400,
+                        color: active ? '#1d1d1f' : '#6e6e73',
+                        textDecoration: 'none',
+                        transition: 'color 0.2s',
+                        whiteSpace: 'nowrap' as const,
+                        letterSpacing: '-0.01em',
+                      }
+                      if (link.authRequired && !isLoggedIn) {
+                        return (
+                          <button key={link.label}
+                            onClick={async () => {
+                              if (!(await showConfirm('로그인이 필요한 기능입니다.\n로그인 페이지로 이동하시겠습니까?'))) return
+                              navigate('/auth')
+                            }}
+                            style={{ ...linkStyle, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                            onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#1d1d1f')}
+                            onMouseLeave={(e) => ((e.target as HTMLElement).style.color = active ? '#1d1d1f' : '#6e6e73')}
+                          >
+                            {link.label}
+                          </button>
+                        )
+                      }
+                      return (
+                        <Link key={link.label} to={link.href}
+                          style={linkStyle}
+                          onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#1d1d1f')}
+                          onMouseLeave={(e) => ((e.target as HTMLElement).style.color = active ? '#1d1d1f' : '#6e6e73')}
+                        >
+                          {link.label}
+                        </Link>
+                      )
+                    })}
+                  </nav>
+                ) : (
+                  <div
+                    onMouseEnter={openMenu}
+                    onMouseLeave={closeMenu}
+                    style={{ display: 'flex', justifyContent: 'center' }}>
+                    <button style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: 13, color: '#6e6e73', padding: '4px 12px',
+                      borderRadius: 999, fontFamily: 'inherit', letterSpacing: '-0.01em',
+                    }}>
+                      카테고리
+                      <svg width={10} height={10} viewBox="0 0 10 10" fill="none">
+                        <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                )}
 
                 {/* 우측 액션 */}
                 <div className="flex items-center" style={{ gap: 12, justifyContent: 'flex-end' }}>
@@ -305,12 +520,12 @@ export default function Header() {
                         onClick={() => navigate('/notifications')}
                         whileTap={{ scale: 0.9 }}
                         title="알림"
+                        className="liquid"
                         style={{
                           position: 'relative',
                           width: 30, height: 30,
                           borderRadius: '50%',
-                          background: 'transparent',
-                          border: '1px solid rgba(0,0,0,0.12)',
+                          border: 'none',
                           color: '#1d1d1f',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: 'pointer',
@@ -350,12 +565,12 @@ export default function Header() {
                         onClick={handleLogout}
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.96 }}
+                        className="liquid"
                         style={{
                           fontSize: 13,
                           fontWeight: 400,
                           color: '#1d1d1f',
-                          background: 'transparent',
-                          border: '1px solid rgba(0,0,0,0.18)',
+                          border: 'none',
                           borderRadius: 999,
                           padding: '6px 16px',
                           cursor: 'pointer',
@@ -387,11 +602,10 @@ export default function Header() {
                         onClick={() => navigate('/auth', { state: { step: 'signup' } })}
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.96 }}
+                        className="liquid liquid-action"
                         style={{
                           fontSize: 13,
                           fontWeight: 500,
-                          color: '#fff',
-                          background: '#1d1d1f',
                           border: 'none',
                           borderRadius: 999,
                           padding: '7px 16px',
@@ -403,6 +617,69 @@ export default function Header() {
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* 좁은 화면에서 호버 시 확장되는 nav 패널 */}
+              <AnimatePresence>
+                {isNarrow && menuOpen && (
+                  <motion.nav
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 44, opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    onMouseEnter={openMenu}
+                    onMouseLeave={closeMenu}
+                    style={{
+                      overflow: 'hidden',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: 28,
+                      borderTop: '1px solid rgba(0,0,0,0.06)',
+                      paddingLeft: 32,
+                      paddingRight: 32,
+                    }}>
+                    {NAV_LINKS.map((link) => {
+                      const active = location.pathname.startsWith(link.href)
+                      const linkStyle = {
+                        fontSize: 13,
+                        fontWeight: 400,
+                        color: active ? '#1d1d1f' : '#6e6e73',
+                        textDecoration: 'none',
+                        transition: 'color 0.2s',
+                        whiteSpace: 'nowrap' as const,
+                        letterSpacing: '-0.01em',
+                      }
+                      if (link.authRequired && !isLoggedIn) {
+                        return (
+                          <button key={link.label}
+                            onClick={async () => {
+                              setMenuOpen(false)
+                              if (!(await showConfirm('로그인이 필요한 기능입니다.\n로그인 페이지로 이동하시겠습니까?'))) return
+                              navigate('/auth')
+                            }}
+                            style={{ ...linkStyle, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                            onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#1d1d1f')}
+                            onMouseLeave={(e) => ((e.target as HTMLElement).style.color = active ? '#1d1d1f' : '#6e6e73')}
+                          >
+                            {link.label}
+                          </button>
+                        )
+                      }
+                      return (
+                        <Link key={link.label} to={link.href}
+                          onClick={() => setMenuOpen(false)}
+                          style={linkStyle}
+                          onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#1d1d1f')}
+                          onMouseLeave={(e) => ((e.target as HTMLElement).style.color = active ? '#1d1d1f' : '#6e6e73')}
+                        >
+                          {link.label}
+                        </Link>
+                      )
+                    })}
+                  </motion.nav>
+                )}
+              </AnimatePresence>
               </div>
             </motion.div>
           )}

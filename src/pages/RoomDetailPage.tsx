@@ -60,14 +60,13 @@ function DatePicker({ value, onChange }: { value: string; onChange: (d: string) 
             key={str}
             onClick={() => onChange(str)}
             whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }}
+            className={active ? 'liquid liquid-action' : 'liquid'}
             style={{
               minWidth: 56, flexShrink: 0,
               padding: '10px 6px', borderRadius: 12,
-              background: active ? '#E07535' : '#ffffff',
-              border: `1px solid ${active ? '#E07535' : '#d2d2d7'}`,
+              border: 'none',
               color: active ? '#fff' : '#1d1d1f',
               cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit',
-              boxShadow: active ? '0 2px 8px rgba(224,117,53,0.25)' : 'none',
             }}>
             <div style={{ fontSize: 10, fontWeight: 500, marginBottom: 4, opacity: 0.7 }}>
               {['일', '월', '화', '수', '목', '금', '토'][d.getDay()]}
@@ -76,7 +75,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (d: string) 
               {d.getDate()}
             </div>
             {isToday && (
-              <div style={{ fontSize: 9, marginTop: 2, color: active ? 'rgba(255,255,255,0.8)' : '#E07535', fontWeight: 600 }}>
+              <div style={{ fontSize: 9, marginTop: 2, color: active ? 'rgba(255,255,255,0.8)' : '#0071E3', fontWeight: 600 }}>
                 TODAY
               </div>
             )}
@@ -131,7 +130,7 @@ function TimeSlotGrid({
           available: { bg: '#ffffff',                   border: '#d2d2d7',                text: '#1d1d1f' },
           taken:     { bg: 'rgba(255,59,48,0.06)',      border: 'rgba(255,59,48,0.2)',    text: '#ff3b30' },
           mine:      { bg: 'rgba(52,199,89,0.08)',      border: 'rgba(52,199,89,0.25)',   text: '#34C759' },
-          selected:  { bg: 'rgba(224,117,53,0.1)',      border: '#E07535',                text: '#E07535' },
+          selected:  { bg: 'rgba(0,113,227,0.1)',      border: '#0071E3',                text: '#0071E3' },
           past:      { bg: '#f5f5f7',                   border: '#e5e5ea',                text: '#aeaeb2' },
         }
         const c = colors[state]
@@ -241,7 +240,7 @@ export default function RoomDetailPage() {
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #e5e5ea', borderTopColor: '#E07535', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #e5e5ea', borderTopColor: '#0071E3', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
@@ -252,7 +251,7 @@ export default function RoomDetailPage() {
       <div style={{ minHeight: '100vh', background: '#f5f5f7', paddingTop: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', color: '#6e6e73' }}>
           <p style={{ marginBottom: 16 }}>룸을 찾을 수 없습니다.</p>
-          <button onClick={() => navigate('/rooms')} style={{ color: '#E07535', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <button onClick={() => navigate('/rooms')} style={{ color: '#0071E3', background: 'none', border: 'none', cursor: 'pointer' }}>
             목록으로
           </button>
         </div>
@@ -337,7 +336,7 @@ export default function RoomDetailPage() {
               <span>■ <span style={{ color: '#1d1d1f' }}>가능</span></span>
               <span style={{ color: '#ff3b30' }}>■ 예약됨</span>
               <span style={{ color: '#34C759' }}>■ 내 예약</span>
-              <span style={{ color: '#E07535' }}>■ 선택됨</span>
+              <span style={{ color: '#0071E3' }}>■ 선택됨</span>
             </div>
           </div>
           <TimeSlotGrid
@@ -359,8 +358,8 @@ export default function RoomDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
               style={{
-                background: 'rgba(224,117,53,0.06)',
-                border: '1px solid rgba(224,117,53,0.2)',
+                background: 'rgba(0,113,227,0.06)',
+                border: '1px solid rgba(0,113,227,0.2)',
                 borderRadius: 16,
                 padding: '20px 24px',
                 marginBottom: 16,
@@ -376,11 +375,12 @@ export default function RoomDetailPage() {
                 onClick={handleReserve}
                 disabled={submitting}
                 whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                className="liquid liquid-action"
                 style={{
                   padding: '12px 28px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-                  background: submitting ? 'rgba(224,117,53,0.4)' : '#E07535',
-                  color: '#fff', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
+                  border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
                   letterSpacing: '-0.01em', fontFamily: 'inherit',
+                  opacity: submitting ? 0.5 : 1,
                 }}>
                 {submitting ? '예약 중...' : isLoggedIn ? '예약하기' : '로그인 후 예약'}
               </motion.button>
