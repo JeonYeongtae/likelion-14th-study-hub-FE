@@ -1349,8 +1349,11 @@ export default function GroupChatPage() {
   const connectWs = useCallback(() => {
     const token = localStorage.getItem('access_token');
     if (!token) return;
+    // 배포 환경: Vercel 프록시는 WebSocket을 중계하지 않으므로 백엔드(Render)로 직접 연결
+    // 로컬 개발: VITE_WS_BASE_URL 미설정 → Vite 프록시(window.location.host) 사용
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/v1/groups/${groupId}/chat/ws?token=${encodeURIComponent(token)}`;
+    const wsBase = (import.meta.env.VITE_WS_BASE_URL as string | undefined) || `${protocol}//${window.location.host}`;
+    const wsUrl = `${wsBase}/api/v1/groups/${groupId}/chat/ws?token=${encodeURIComponent(token)}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     setWsState('connecting');
